@@ -1,6 +1,8 @@
 import os
 import sys
-from PyQt5 import QtWidgets, QtGui
+
+from PySide import QtGui
+
 from interfaces.advanced import MineStartAdvanced
 from interfaces.basic import MineStartBasic
 from interfaces.firststart import FirstStart
@@ -10,7 +12,7 @@ import utils
 
 class MineStart(object):
     def main(self):
-        self.app = QtWidgets.QApplication(sys.argv)
+        self.app = QtGui.QApplication(sys.argv)
         self.app.setApplicationName("MineStart")
 
         self.ui_config = utils.Config(os.path.join(launcher.get_data_folder(), "ui_config.json"), {
@@ -24,9 +26,11 @@ class MineStart(object):
             self.window.finished.connect(self.first_start_finished)
         elif self.ui_config["mode"] == "basic":
             self.window = MineStartBasic()
+            self.app.setStyleSheet("".join(open("assets/css/basic.css").readlines()))
             self.window.change_to_advanced.connect(self.change_to_advanced)
         else:
             self.window = MineStartAdvanced()
+            self.app.setStyleSheet("".join(open("assets/css/advanced.css").readlines()))
             self.window.change_to_basic.connect(self.change_to_basic)
         self.refresh_things()
 
@@ -35,17 +39,24 @@ class MineStart(object):
     def change_to_basic(self):
         self.window.close()
         self.window = MineStartBasic()
+        self.app.setStyleSheet("".join(open("assets/css/basic.css").readlines()))
         self.window.change_to_advanced.connect(self.change_to_basic)
         self.refresh_things()
+        self.ui_config.load()
+        self.ui_config["mode"] = "basic"
+        self.ui_config.save()
 
     def change_to_advanced(self):
         self.window.close()
         self.window = MineStartAdvanced()
+        self.app.setStyleSheet("".join(open("assets/css/advanced.css").readlines()))
         self.window.change_to_basic.connect(self.change_to_basic)
         self.refresh_things()
+        self.ui_config.load()
+        self.ui_config["mode"] = "advanced"
+        self.ui_config.save()
 
     def refresh_things(self):
-        self.app.setStyleSheet("".join(open("assets/misc/style.css").readlines()))
         QtGui.QFontDatabase.addApplicationFont("assets/misc/Minecraftia.ttf")
 
     def first_start_finished(self):

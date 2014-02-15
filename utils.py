@@ -1,7 +1,6 @@
 from copy import deepcopy
 import json
 import os
-import collections
 
 
 def dict_merge(a, b):
@@ -46,7 +45,7 @@ class Config(object):
     def save(self):
         try:
             os.makedirs(os.path.dirname(self.path))
-        except FileExistsError:
+        except OSError:
             pass
         with open(self.path, "w+") as handle:
             if self.prettyprint:
@@ -57,7 +56,7 @@ class Config(object):
     def load(self):
         try:
             os.makedirs(os.path.dirname(self.path))
-        except FileExistsError:
+        except OSError:
             pass
         try:
             open(self.path, "a+").close()  # Create file
@@ -81,22 +80,22 @@ class Config(object):
 
 class AttibuteDict(dict):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(AttibuteDict, self).__init__(*args, **kwargs)
 
     def __getattr__(self, item):
         try:
-            return change_to_attributedict(super().__getitem__(item))
+            return change_to_attributedict(super(AttibuteDict, self).__getitem__(item))
         except KeyError as e:
             raise AttributeError(item)
 
     def __setattr__(self, key, value):
-        super().__setitem__(key, change_to_attributedict(value))
+        super(AttibuteDict, self).__setitem__(key, change_to_attributedict(value))
 
     def __getitem__(self, item):
-        return change_to_attributedict(super().__getitem__(item))
+        return change_to_attributedict(super(AttibuteDict, self).__getitem__(item))
 
     def __setitem__(self, key, value):
-        super().__setitem__(key, change_to_attributedict(value))
+        super(AttibuteDict, self).__setitem__(key, change_to_attributedict(value))
 
     def items(self):
-        return [(k, change_to_attributedict(v)) for k, v in super().items()]
+        return [(k, change_to_attributedict(v)) for k, v in super(AttibuteDict, self).items()]

@@ -1,44 +1,44 @@
 #BasicMainWindow {
-    background-image: url("./assets/background.png");
+    background-image: url("./assets/misc/background.png");
 }
 
 #BasicLauncherPanel > QLineEdit {
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 127);
     padding: 10px;
-    border: 2px outset rgba(255, 255, 255, 0.5);
+    border: 2px outset rgba(255, 255, 255, 127);
     font-family: "Minecraftia",sans-serif;
     font-size: 12pt;
     color: white;
 }
 #BasicLauncherPanel > QLineEdit:hover {
-    background-color: rgba(100, 100, 100, 0.5);
-    border: 2px outset rgba(255, 255, 255, 0.7);
+    background-color: rgba(100, 100, 100, 127);
+    border: 2px outset rgba(255, 255, 255, 200);
 }
 
 #BasicLauncherPanel > QPushButton {
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 127);
     padding: 11px;
-    border: 2px outset rgba(255, 255, 255, 0.5);
+    border: 2px outset rgba(255, 255, 255, 127);
     font-family: "Minecraftia",sans-serif;
     font-size: 12pt;
     color: white;
 }
 
 #BasicLauncherPanel > QPushButton:hover {
-    background-color: rgba(100, 100, 100, 0.5);
-    border: 2px outset rgba(255, 255, 255, 0.7);
+    background-color: rgba(100, 100, 100, 127);
+    border: 2px outset rgba(255, 255, 255, 200);
 }
 
 #BasicMainWidget > QComboBox {
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 127);
     padding: 9px;
-    border: 2px outset rgba(255, 255, 255, 0.5);
+    border: 2px outset rgba(255, 255, 255, 127);
     font-family: "Minecraftia",sans-serif;
     font-size: 12pt;
     color: white;
 }
 #BasicMainWidget > QComboBox:hover {
-    background-color: rgba(100, 100, 100, 0.5);
+    background-color: rgba(100, 100, 100, 127);
     border: 2px outset rgba(255, 255, 255, 0.7);
 }
 
@@ -50,7 +50,4 @@
     font-family: "Minecraftia",sans-serif;
     font-size: 12pt;
     color: white;
-}
-
-#AdvancedPlayerChooser {
 }

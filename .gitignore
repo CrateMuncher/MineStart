@@ -5,3 +5,4 @@ test.py
 assets/Thumbs.db
 build/
 build.log
+*.pyc

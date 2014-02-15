@@ -29,12 +29,6 @@ class Launcher(object):
                 random.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for x in range(32)),
             "current_profile": "Minecraft",
             "profiles": {
-                "Minecraft": {
-                    "mods": [],
-                    "name": "Minecraft",
-                    "resolution": "854x480",
-                    "version": "latestrelease"
-                }
             },
             "user_accounts": {}
         })
@@ -58,8 +52,18 @@ class Launcher(object):
         print(message)
 
     def load_config(self):
+        if len(self.config["profiles"]) == 0:
+            self.config["profiles"] = {
+                "Minecraft": {
+                    "mods": [],
+                    "name": "Minecraft",
+                    "resolution": "854x480",
+                    "version": "latestrelease"
+                }
+            }
+
         profiles = self.config["profiles"]
-        for profile in profiles.values():
+        for profile in profiles.itervalues():
             self.profiles[profile["name"]] = Profile.deserialize(profile)
 
         # Get the current profile as specified by the config
@@ -70,7 +74,7 @@ class Launcher(object):
 
         self.client_token = self.config["client_token"]
         json_user_accounts = self.config["user_accounts"]
-        for name, account in json_user_accounts.items():
+        for name, account in json_user_accounts.iteritems():
             self.user_accounts[name] = UserAccount.deserialize(account)
 
         self.save_config()
@@ -82,11 +86,11 @@ class Launcher(object):
         self.config["current_profile"] = self.current_profile.name
 
         self.config["profiles"] = {}
-        for name, profile in self.profiles.items():
+        for name, profile in self.profiles.iteritems():
             self.config["profiles"][name] = profile.serialize()
 
         self.config["user_accounts"] = {}
-        for name, account in self.user_accounts.items():
+        for name, account in self.user_accounts.iteritems():
             self.config["user_accounts"][name] = account.serialize()
 
         self.config.save()
@@ -150,7 +154,10 @@ class Launcher(object):
     def download_game(self, version, game_dir):
         self.debug("Downloading game jar...")
         self.status("Downloading game code...")
-        os.makedirs(game_dir, exist_ok=True)
+        try:
+            os.makedirs(game_dir)
+        except OSError:
+            pass
         filename = os.path.join(game_dir, version + ".jar")
         url = "https://s3.amazonaws.com/Minecraft.Download/versions/" + version + "/" + version + ".jar"
         r = requests.get(url, stream=True)
@@ -162,8 +169,15 @@ class Launcher(object):
 
     def download_libraries(self, version, lib_dir, extract_dir):
         self.debug("Downloading libraries...")
-        os.makedirs(lib_dir, exist_ok=True)
-        os.makedirs(extract_dir, exist_ok=True)
+        try:
+            os.makedirs(lib_dir)
+        except OSError:
+            pass
+
+        try:
+            os.makedirs(extract_dir)
+        except OSError:
+            pass
         version_info = requests.get(
             "https://s3.amazonaws.com/Minecraft.Download/versions/" + version + "/" + version + ".json").json()
 
@@ -213,7 +227,10 @@ class Launcher(object):
 
     def download_assets(self, version, assets_dir):
         self.debug("Downloading assets...")
-        os.makedirs(assets_dir, exist_ok=True)
+        try:
+            os.makedirs(assets_dir)
+        except OSError:
+            pass
         version_info = requests.get(
             "https://s3.amazonaws.com/Minecraft.Download/versions/" + version + "/" + version + ".json").json()
 
@@ -225,14 +242,17 @@ class Launcher(object):
 
         indexes_resp = requests.get("https://s3.amazonaws.com/Minecraft.Download/indexes/" + index_name + ".json")
         indexes = indexes_resp.json()
-        os.makedirs(os.path.join(assets_dir, "indexes"), exist_ok=True)
+        try:
+            os.makedirs(os.path.join(assets_dir, "indexes"))
+        except OSError:
+            pass
         with open(os.path.join(assets_dir, "indexes", index_name + ".json"), "w+") as f:
             f.writelines(indexes_resp.text)
 
-        assets_count = len(indexes["objects"].items())
+        assets_count = len(indexes["objects"].iteritems())
         assets_current = 0
 
-        for path, obj in indexes["objects"].items():
+        for path, obj in indexes["objects"].iteritems():
             assets_current += 1
             self.status("Downloading assets [" + str(assets_current) + "/" + str(assets_count) + "]")
             self.debug("Found object at " + path)
@@ -241,7 +261,10 @@ class Launcher(object):
             else:
                 filename = os.path.join(assets_dir, "objects", obj["hash"][0:2], obj["hash"])
             if os.sep in filename:
-                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                try:
+                    os.makedirs(os.path.dirname(filename))
+                except OSError:
+                    pass
             url = "http://resources.download.minecraft.net/" + obj["hash"][0:2] + "/" + obj["hash"]
             self.debug("Downloading object at " + url)
             r = requests.get(url, stream=True)
@@ -270,12 +293,12 @@ class Launcher(object):
         return self.user_accounts.get(name, None)
 
     def get_user_account_by_id(self, id_):
-        for account in self.user_accounts.values():
+        for account in self.user_accounts.itervalues():
             if account.uuid == id_:
                 return account
 
     def sign_all_out(self):
-        for account in self.user_accounts.values():
+        for account in self.user_accounts.itervalues():
             account.sign_out(self.client_token)
 
     def is_user_logged_in(self, user_data):
