@@ -21,7 +21,7 @@ class MineStartBasic(QtWidgets.QMainWindow):
         self.main_widget.customContextMenuRequested.connect(self.popup_context)
         self.main_widget.setObjectName("BasicMainWidget")
         self.mojang = QtWidgets.QLabel(self.main_widget)
-        self.mojang.setPixmap(QtGui.QPixmap("assets/mojang-small.png"))
+        self.mojang.setPixmap(QtGui.QPixmap("assets/misc/mojang-small.png"))
 
         self.version = QtWidgets.QLabel(self.main_widget)
         self.version.setText(
@@ -33,11 +33,11 @@ class MineStartBasic(QtWidgets.QMainWindow):
 
         self.minecraft = QtWidgets.QLabel(self.main_widget)
         self.minecraft.setAlignment(QtCore.Qt.AlignCenter)
-        self.minecraft.setPixmap(QtGui.QPixmap("assets/logo.png"))
+        self.minecraft.setPixmap(QtGui.QPixmap("assets/misc/logo.png"))
 
         self.close_btn = QtWidgets.QPushButton(self.main_widget)
         self.close_btn.setFlat(True)
-        self.close_btn.setIcon(QtGui.QIcon(QtGui.QPixmap("assets/close.png").scaled(QtCore.QSize(32, 32))))
+        self.close_btn.setIcon(QtGui.QIcon(QtGui.QPixmap("assets/icons/close.png").scaled(QtCore.QSize(32, 32))))
         self.close_btn.clicked.connect(self.close)
 
         self.login_panel = LoginPanel(self.main_widget)
@@ -52,8 +52,8 @@ class MineStartBasic(QtWidgets.QMainWindow):
         self.launcher_panel.user_signed_out.connect(self.sign_out)
         self.launcher_panel.settings_opened.connect(self.settings)
 
-        self.status_up_pixmap = QtGui.QPixmap("assets/redstone_lamp_on.png")
-        self.status_down_pixmap = QtGui.QPixmap("assets/redstone_lamp_off.png")
+        self.status_up_pixmap = QtGui.QPixmap("assets/lamp/redstone_lamp_on.png")
+        self.status_down_pixmap = QtGui.QPixmap("assets/lamp/redstone_lamp_off.png")
 
         self.uptime_skins = QtWidgets.QLabel()
         self.uptime_session = QtWidgets.QLabel()
@@ -195,7 +195,7 @@ class MineStartBasic(QtWidgets.QMainWindow):
                 pass
 
     def refresh_user_selector(self):
-        if len(self.launcher.user_accounts) == 0:
+        if len(self.launcher.user_accounts) <= 1:
             self.user_selector.hide()
         else:
             self.user_selector.show()

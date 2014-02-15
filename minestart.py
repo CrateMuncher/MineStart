@@ -45,8 +45,8 @@ class MineStart(object):
         self.refresh_things()
 
     def refresh_things(self):
-        self.app.setStyleSheet("".join(open("assets/style.css").readlines()))
-        QtGui.QFontDatabase.addApplicationFont("assets/Minecraftia.ttf")
+        self.app.setStyleSheet("".join(open("assets/misc/style.css").readlines()))
+        QtGui.QFontDatabase.addApplicationFont("assets/misc/Minecraftia.ttf")
 
     def first_start_finished(self):
         self.ui_config.load()
