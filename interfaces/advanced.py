@@ -61,7 +61,7 @@ class MineStartAdvanced(QtWidgets.QMainWindow):
             def settings():
                 self.open_settings(profile)
 
-            item = QtWidgets.QListWidgetItem(QtGui.QIcon("assets/profile_icons/steve.png"), profile.name)
+            item = QtWidgets.QListWidgetItem(QtGui.QIcon("assets/profile_icons/grass.png"), profile.name)
             self.profiles.addItem(item)
             if profile == self.launcher.current_profile:
                 item.setSelected(True)
