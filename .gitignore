@@ -3,3 +3,5 @@ __pycache__/
 logs/
 test.py
 assets/Thumbs.db
+build/
+build.log

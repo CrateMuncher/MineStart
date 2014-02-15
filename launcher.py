@@ -1,14 +1,15 @@
-from collections import namedtuple
 import glob
 import json
 import os
 import random
 import string
 import subprocess
-from recordtype import recordtype
-import requests
 import sys
 import zipfile
+
+import requests
+
+from recordtype import recordtype
 import utils
 
 
