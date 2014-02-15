@@ -24,7 +24,8 @@ class Launcher(object):
 
         data_dir = get_data_folder()
         self.config = utils.Config(os.path.join(data_dir, "config.json"), defaults={
-            "client_token": ''.join(random.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for x in range(32)),
+            "client_token": ''.join(
+                random.choice(string.ascii_lowercase + string.ascii_uppercase + string.digits) for x in range(32)),
             "current_profile": "Minecraft",
             "profiles": {
                 "Minecraft": {
@@ -58,13 +59,7 @@ class Launcher(object):
     def load_config(self):
         profiles = self.config["profiles"]
         for profile in profiles.values():
-            self.debug("Loaded profile " + profile["name"])
-            profile_mods = []
-            for mod in profile["mods"]:
-                mod_obj = Mod(path=mod["path"], priority=mod["priority"])
-                profile_mods.append(mod_obj)
-            profile_obj = Profile(name=profile["name"], version=profile["version"], mods=profile_mods, resolution=profile["resolution"])
-            self.profiles[profile_obj.name] = profile_obj
+            self.profiles[profile["name"]] = Profile.deserialize(profile)
 
         # Get the current profile as specified by the config
         # If it doesn't specify any profile name, use "Minecraft"
@@ -74,11 +69,8 @@ class Launcher(object):
 
         self.client_token = self.config["client_token"]
         json_user_accounts = self.config["user_accounts"]
-        for json_account in json_user_accounts.values():
-            self.debug("Loaded account " + json_account["username"])
-            account = UserAccount(username=json_account["username"], uuid=json_account["uuid"],
-                                  access_token=json_account["access_token"])
-            self.user_accounts[account.username] = account
+        for name, account in json_user_accounts.items():
+            self.user_accounts[name] = UserAccount.deserialize(account)
 
         self.save_config()
 
@@ -90,17 +82,11 @@ class Launcher(object):
 
         self.config["profiles"] = {}
         for name, profile in self.profiles.items():
-            profile_cfg = {"name": profile.name, "version": profile.version, "mods": [], "resolution": profile.resolution}
-
-            for mod in profile.mods:
-                mod_cfg = {"path": mod.path, "priority": mod.priority}
-                profile_cfg["mods"].append(mod_cfg)
-            self.config["profiles"][name] = profile_cfg
+            self.config["profiles"][name] = profile.serialize()
 
         self.config["user_accounts"] = {}
-        for account in self.user_accounts.values():
-            account_cfg = {"username": account.username, "uuid": account.uuid, "access_token": account.access_token}
-            self.config["user_accounts"][account.username] = account_cfg
+        for name, account in self.user_accounts.items():
+            self.config["user_accounts"][name] = account.serialize()
 
         self.config.save()
 
@@ -341,8 +327,31 @@ class Profile(recordtype('Profile', ["name", "version", "mods", "resolution"])):
         for mod in sorted_mods:
             pass
 
+    def serialize(self):
+        return {
+            "name": self.name,
+            "version": self.version,
+            "mods": [mod.serialize() for mod in self.mods],
+            "resolution": self.resolution
+        }
+
+    @staticmethod
+    def deserialize(data):
+        return Profile(name=data["name"], version=data["version"],
+                       mods=[Mod.deserialize(mod_data) for mod_data in data["mods"]], resolution=data["resolution"])
+
+
 class Mod(recordtype('Mod', ['path', 'priority'])):
-    pass
+    def serialize(self):
+        return {
+            "path": self.path,
+            "priority": self.priority
+        }
+
+    @staticmethod
+    def deserialize(data):
+        return Mod(path=data["path"], priority=data["priority"])
+
 
 class UserAccount(recordtype('UserAccount', ["username", "uuid", "access_token"])):
     def is_logged_in(self, launcher):
@@ -379,7 +388,8 @@ class UserAccount(recordtype('UserAccount', ["username", "uuid", "access_token"]
         headers = {'Content-type': 'application/json'}
         r = requests.post("https://authserver.mojang.com/refresh", headers=headers, data=json.dumps(data))
         resp = r.json()
-        if "error" in resp and (resp["error"] == "ForbiddenOperationException" or resp["error"] == "IllegalArgumentException"):
+        if "error" in resp and (
+                        resp["error"] == "ForbiddenOperationException" or resp["error"] == "IllegalArgumentException"):
             launcher.status("Error: Invalid session key!")
             raise InvalidCredentialsError("Error: Invalid session key!")
         self.access_token = resp["accessToken"]
@@ -394,6 +404,17 @@ class UserAccount(recordtype('UserAccount', ["username", "uuid", "access_token"]
         headers = {'Content-type': 'application/json'}
         requests.post("https://authserver.mojang.com/invalidate", headers=headers, data=json.dumps(data))
         self.access_token = None
+
+    def serialize(self):
+        return {
+            "username": self.username,
+            "uuid": self.uuid,
+            "access_token": self.access_token
+        }
+
+    @staticmethod
+    def deserialize(data):
+        return UserAccount(username=data["username"], uuid=data["uuid"], access_token=data["access_token"])
 
 
 class LauncherError(Exception):
