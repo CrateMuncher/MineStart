@@ -1,0 +1,53 @@
+#BasicMainWindow {
+    background-image: url("./assets/background.png");
+}
+
+#BasicLauncherPanel > QLineEdit {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border: 2px outset rgba(255, 255, 255, 0.5);
+    font-family: "Minecraftia",sans-serif;
+    font-size: 12pt;
+    color: white;
+}
+#BasicLauncherPanel > QLineEdit:hover {
+    background-color: rgba(100, 100, 100, 0.5);
+    border: 2px outset rgba(255, 255, 255, 0.7);
+}
+
+#BasicLauncherPanel > QPushButton {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 11px;
+    border: 2px outset rgba(255, 255, 255, 0.5);
+    font-family: "Minecraftia",sans-serif;
+    font-size: 12pt;
+    color: white;
+}
+
+#BasicLauncherPanel > QPushButton:hover {
+    background-color: rgba(100, 100, 100, 0.5);
+    border: 2px outset rgba(255, 255, 255, 0.7);
+}
+
+#BasicMainWidget > QComboBox {
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 9px;
+    border: 2px outset rgba(255, 255, 255, 0.5);
+    font-family: "Minecraftia",sans-serif;
+    font-size: 12pt;
+    color: white;
+}
+#BasicMainWidget > QComboBox:hover {
+    background-color: rgba(100, 100, 100, 0.5);
+    border: 2px outset rgba(255, 255, 255, 0.7);
+}
+
+#BasicMainWidget > QComboBox::drop-down {
+    background-color: transparent;
+}
+
+#BasicMainWidget > QLabel {
+    font-family: "Minecraftia",sans-serif;
+    font-size: 12pt;
+    color: white;
+}
