@@ -1,4 +1,5 @@
 import json
+import threading
 
 from PySide import QtCore, QtGui
 import requests
@@ -13,6 +14,7 @@ class MineStartAdvanced(QtGui.QMainWindow):
         super(MineStartAdvanced, self).__init__()
 
         self.launcher = launcher.Launcher()
+        self.launcher.get_available_versions()  # Just to get the cache up
 
         logged_in = len(self.launcher.user_accounts) > 0
         while not logged_in:
@@ -29,8 +31,9 @@ class MineStartAdvanced(QtGui.QMainWindow):
         self.toolbar = QtGui.QToolBar()
         self.toolbar.addAction(QtGui.QIcon("assets/icons/user_add.png"), "Add Profile")
         self.toolbar.addAction(QtGui.QIcon("assets/icons/user_delete.png"), "Remove Profile")
-        self.toolbar.addAction(QtGui.QIcon("assets/icons/play.png"), "Play Game")
-        self.toolbar.addAction(QtGui.QIcon("assets/icons/settings.png"), "Profile Options")
+        self.play_button = self.toolbar.addAction(QtGui.QIcon("assets/icons/play.png"), "Play Game")
+        self.play_button.triggered.connect(self.launch)
+        self.settings_button = self.toolbar.addAction(QtGui.QIcon("assets/icons/settings.png"), "Profile Options")
 
         self.player_chooser = QtGui.QComboBox()
         self.player_chooser.setIconSize(QtCore.QSize(32, 32))
@@ -61,11 +64,12 @@ class MineStartAdvanced(QtGui.QMainWindow):
         self.profiles.setViewMode(QtGui.QListView.IconMode)
         self.profiles.setMovement(QtGui.QListView.Static)
         self.profiles.setIconSize(QtCore.QSize(64, 64))
+        self.profiles.customContextMenuRequested.connect(self.open_profile_context_menu)
+        self.profiles.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+
+        self.launching = False
 
         for profile in self.launcher.profiles.itervalues():
-            def settings():
-                self.open_settings(profile)
-
             item = QtGui.QListWidgetItem(QtGui.QIcon("assets/profile_icons/grass.png"), profile.name)
             self.profiles.addItem(item)
             if profile == self.launcher.current_profile:
@@ -113,12 +117,61 @@ class MineStartAdvanced(QtGui.QMainWindow):
         self.resize(854, 480)
         self.show()
 
-    def edit_profile_field(self, item, column):
-        if column not in [1]:  # Disallowed!
-            self.profiles.editItem(item, column)
-
     def open_settings(self, profile):
-        pass
+        dialog = Settings(profile, self.launcher, self)
+
+    def launch(self):
+        if self.launching:
+            return
+        self.launching = True
+        for profile in self.launcher.profiles.itervalues():
+            if self.profiles.currentItem().text() == profile.name:
+                self.launcher.current_profile = profile
+
+        self.launcher_popup = QtGui.QWidget()
+
+        status_label = QtGui.QListWidget(self.launcher_popup)
+        close_button = QtGui.QPushButton("Cancel", self.launcher_popup)
+        main_vbox = QtGui.QVBoxLayout()
+        main_vbox.addWidget(status_label)
+        main_vbox.addWidget(close_button)
+
+        self.launcher_popup.setLayout(main_vbox)
+        self.launcher_popup.resize(480, 320)
+        self.launcher_popup.show()
+
+        def close_window():
+            self.launcher_popup.close()
+
+        def message(string):
+            status_label.addItem(QtGui.QListWidgetItem(string))
+            status_label.scrollToBottom()
+
+        def launched():
+            self.launching = False
+
+        self.launch_thread = LauncherThread(self.launcher, self.player_chooser.currentText())
+        self.launch_thread.message.connect(message)
+        self.launch_thread.finished.connect(close_window)
+        self.launch_thread.launched.connect(launched)
+        self.launch_thread.start()
+
+    def open_profile_context_menu(self, pos):
+        def settings():
+            for profile in self.launcher.profiles.itervalues():
+                if profile.name == item.text():
+                    self.open_settings(profile)
+
+        item = self.profiles.itemAt(pos)
+        if item is not None:
+            global_pos = self.profiles.mapToGlobal(pos)
+
+            menu = QtGui.QMenu()
+
+            settings_ac = menu.addAction("Settings")
+            settings_ac.triggered.connect(settings)
+
+            menu.exec_(global_pos)
 
     def refresh_status(self):
         def update_ui(json_str):
@@ -178,9 +231,78 @@ class MineStartAdvanced(QtGui.QMainWindow):
         self.refresh_thread.fetched.connect(update_ui)
         self.refresh_thread.start()
 
-class Settings(QtGui.QWidget):
-    pass
+class Settings(QtGui.QDialog):
+    def __init__(self, profile, launcher_, parent=None):
+        super(Settings, self).__init__(parent)
+        self.profile = profile
+        self.launcher = launcher_
 
+        self.tabs = QtGui.QTabWidget()
+
+        self.general_tab = QtGui.QWidget()
+
+        self.version_selector = QtGui.QListWidget()
+        latest_snapshot = QtGui.QListWidgetItem("Latest Snapshot")
+        latest_release = QtGui.QListWidgetItem("Latest Release")
+        self.version_selector.addItem(latest_snapshot)
+        self.version_selector.addItem(latest_release)
+
+        if self.profile.version == "latestsnapshot":
+            latest_snapshot.setSelected(True)
+        elif self.profile.version == "latestrelease":
+            latest_release.setSelected(True)
+
+        self.version_selector.currentItemChanged.connect(self.update_current_version)
+
+        for version in self.launcher.get_available_versions():
+            item = QtGui.QListWidgetItem(version)
+            self.version_selector.addItem(item)
+            if version == self.profile.version:
+                item.setSelected(True)
+
+        self.resolution_w = QtGui.QSpinBox()
+        self.resolution_w.setMaximum(9999)
+        self.resolution_w.setValue(int(self.profile.resolution.split("x")[0]))
+        self.resolution_w.valueChanged.connect(self.update_resolution)
+        self.resolution_h = QtGui.QSpinBox()
+        self.resolution_h.setMaximum(9999)
+        self.resolution_h.setValue(int(self.profile.resolution.split("x")[1]))
+        self.resolution_h.valueChanged.connect(self.update_resolution)
+
+
+        resolution_hbox = QtGui.QHBoxLayout()
+        resolution_hbox.addWidget(self.resolution_w)
+        resolution_hbox.addWidget(QtGui.QLabel("x"))
+        resolution_hbox.addWidget(self.resolution_h)
+        resolution_hbox.addStretch(1)
+
+        general_form = QtGui.QFormLayout()
+        general_form.addRow("Version", self.version_selector)
+        general_form.addRow("Resolution", resolution_hbox)
+
+        self.general_tab.setLayout(general_form)
+        self.tabs.addTab(self.general_tab, "General")
+
+        main_vbox = QtGui.QVBoxLayout()
+        main_vbox.addWidget(self.tabs)
+
+        self.setLayout(main_vbox)
+        self.resize(320, 240)
+        self.show()
+
+    def update_current_version(self):
+        if self.version_selector.currentItem().text() == "Latest Snapshot":
+            self.profile.version = "latestsnapshot"
+        elif self.version_selector.currentItem().text() == "Latest Release":
+            self.profile.version = "latestrelease"
+        else:
+            self.profile.version = self.version_selector.currentItem().text()
+        self.launcher.save_config()
+
+    def update_resolution(self):
+        res = str(self.resolution_w.value()) + "x" + str(self.resolution_h.value())
+        self.profile.resolution = res
+        self.launcher.save_config()
 
 class LoginForm(QtGui.QDialog):
     def __init__(self):
@@ -236,3 +358,25 @@ class FetchString(QtCore.QThread):
     def run(self):
         resp = requests.get(self.url).text
         self.fetched.emit(resp)
+
+class LauncherThread(QtCore.QThread):
+    launched = QtCore.Signal()
+    message = QtCore.Signal(str)
+    finished = QtCore.Signal()
+
+    def __init__(self, launcher, user_account):
+        super(LauncherThread, self).__init__()
+        self.launcher = launcher
+        self.user_account = user_account
+
+    def run(self):
+        def message(string):
+            self.message.emit(string)
+
+        def launched():
+            self.launched.emit()
+        self.launcher.status = message
+        self.launcher.launched = launched
+
+        self.launcher.launch(self.launcher.get_user_account_by_name(self.user_account))
+        self.finished.emit()

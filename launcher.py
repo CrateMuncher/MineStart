@@ -10,6 +10,7 @@ import zipfile
 import requests
 
 from recordtype import recordtype
+import shutil
 import utils
 
 
@@ -18,6 +19,7 @@ class Launcher(object):
         self.available_versions = []
         self.debug = self.log_to_console  # A method taking one positional argument (the message)
         self.status = self.log_info  # A method taking one positional argument (the message)
+        self.launched = lambda: None
         self.current_profile = None
         self.client_token = None
         self.profiles = {}
@@ -105,17 +107,36 @@ class Launcher(object):
         version_info = requests.get(
             "https://s3.amazonaws.com/Minecraft.Download/versions/" + version + "/" + version + ".json").json()
 
-        version_dir = os.path.join(data_dir, os.path.join("profiles", self.current_profile.name))
+        version_dir = os.path.join(data_dir, os.path.join("profiles", self.current_profile.name, version))
         assets_dir = os.path.join(version_dir, "assets")
         lib_dir = os.path.join(version_dir, "libraries")
         game_dir = os.path.join(version_dir, "game")
         natives_dir = os.path.join(version_dir, "natives")
-        if not os.path.exists(assets_dir):
+
+        previous_lock = os.path.exists(os.path.join(version_dir, "download_lock"))
+
+        try:
+            os.makedirs(version_dir)
+        except OSError:
+            pass
+
+        open(os.path.join(version_dir, "download_lock"), "a+").close()
+        if (not os.path.exists(assets_dir)) or previous_lock:
+            if os.path.exists(assets_dir):
+                shutil.rmtree(assets_dir)
             self.download_assets(version, assets_dir)
-        if not os.path.exists(lib_dir):
+
+        if (not os.path.exists(lib_dir)) or previous_lock:
+            if os.path.exists(lib_dir):
+                shutil.rmtree(lib_dir)
             self.download_libraries(version, lib_dir, natives_dir)
-        if not os.path.exists(game_dir):
+
+        if (not os.path.exists(game_dir)) or previous_lock:
+            if os.path.exists(game_dir):
+                shutil.rmtree(game_dir)
             self.download_game(version, game_dir)
+        os.remove(os.path.join(version_dir, "download_lock"))
+
 
         classpath = []
         for file in glob.glob(os.path.join(lib_dir, "*.jar")):
@@ -148,7 +169,8 @@ class Launcher(object):
         self.debug("Running Minecraft using command: " + command)
         popen = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.status("Minecraft started!")
-        while True:
+        self.launched()
+        while popen.poll() is None:
             self.status(str(popen.stdout.readline()))
 
     def download_game(self, version, game_dir):
@@ -213,17 +235,20 @@ class Launcher(object):
                             f.flush()
 
                 if "extract" in library:
-                    with zipfile.ZipFile(filename) as zip:
-                        names = zip.namelist()
+                    try:
+                        with zipfile.ZipFile(filename) as zip:
+                            names = zip.namelist()
 
-                        for name in names:
-                            excluded = False
-                            for exclusion in library["extract"]["exclude"]:
-                                if name.startswith(exclusion):
-                                    excluded = True
+                            for name in names:
+                                excluded = False
+                                for exclusion in library["extract"]["exclude"]:
+                                    if name.startswith(exclusion):
+                                        excluded = True
 
-                            if not excluded:
-                                zip.extract(name, path=extract_dir)
+                                if not excluded:
+                                    zip.extract(name, path=extract_dir)
+                    except zipfile.BadZipfile:
+                        pass
 
     def download_assets(self, version, assets_dir):
         self.debug("Downloading assets...")
@@ -238,7 +263,7 @@ class Launcher(object):
         if index_name is None:
             index_name = "legacy"
         self.index_name = index_name
-        self.debug("Index name: ", index_name)
+        self.debug("Index name: " + index_name)
 
         indexes_resp = requests.get("https://s3.amazonaws.com/Minecraft.Download/indexes/" + index_name + ".json")
         indexes = indexes_resp.json()
@@ -249,7 +274,7 @@ class Launcher(object):
         with open(os.path.join(assets_dir, "indexes", index_name + ".json"), "w+") as f:
             f.writelines(indexes_resp.text)
 
-        assets_count = len(indexes["objects"].iteritems())
+        assets_count = len(indexes["objects"])
         assets_current = 0
 
         for path, obj in indexes["objects"].iteritems():
@@ -488,10 +513,10 @@ def get_javaw_path():
             java = os.path.join(bin, "java")
             javaw = os.path.join(bin, "javaw")
             if check_java("\"" + java + "\""):
-                return javaw
+                return java
 
     if check_java("java"):
-        return "javaw"
+        return "java"
 
 
 def check_java(path):
